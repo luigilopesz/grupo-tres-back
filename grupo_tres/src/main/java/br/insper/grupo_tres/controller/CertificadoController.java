@@ -1,0 +1,99 @@
+package br.insper.grupo_tres.controller;
+
+import br.insper.grupo_tres.models.CertificadoAtivo;
+import br.insper.grupo_tres.models.CertificadoCancelado;
+import br.insper.grupo_tres.service.CertificadoService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/certificados")
+public class CertificadoController {
+
+    @Autowired
+    private CertificadoService certificadoService;
+
+    // POST - Criar um novo certificado ativo
+    @PostMapping
+    public ResponseEntity<CertificadoAtivo> createCertificado(@RequestBody Map<String, Object> payload) {
+        // Basic validation or use a DTO with validation annotations
+        String emailAluno = (String) payload.get("emailAluno");
+        Long idCurso = Long.valueOf(payload.get("idCurso").toString()); // Handle potential NumberFormatException
+        // Assuming dataEmissao is sent or defaults to now
+        LocalDate dataEmissao = payload.containsKey("dataEmissao") ? LocalDate.parse(payload.get("dataEmissao").toString()) : LocalDate.now();
+
+        CertificadoAtivo novoCertificado = certificadoService.criarCertificado(emailAluno, idCurso, dataEmissao);
+        return ResponseEntity.status(HttpStatus.CREATED).body(novoCertificado);
+    }
+
+    // GET - Buscar certificado ativo por ID
+    @GetMapping("/{id}")
+    public ResponseEntity<CertificadoAtivo> getCertificadoAtivo(@PathVariable Long id) {
+        try {
+            CertificadoAtivo certificado = certificadoService.findCertificadoAtivo(id);
+            return ResponseEntity.ok(certificado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // GET - Buscar certificado cancelado por ID original
+    @GetMapping("/cancelados/original/{idOriginal}")
+    public ResponseEntity<CertificadoCancelado> getCertificadoCancelado(@PathVariable Long idOriginal) {
+        try {
+            CertificadoCancelado certificado = certificadoService.findCertificadoCancelado(idOriginal);
+            return ResponseEntity.ok(certificado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // GET - Listar todos os certificados ativos
+    @GetMapping("/ativos")
+    public ResponseEntity<List<CertificadoAtivo>> getAllCertificadosAtivos() {
+        List<CertificadoAtivo> certificados = certificadoService.listarCertificadosAtivos();
+        return ResponseEntity.ok(certificados);
+    }
+
+    // GET - Listar todos os certificados cancelados
+    @GetMapping("/cancelados")
+    public ResponseEntity<List<CertificadoCancelado>> getAllCertificadosCancelados() {
+        List<CertificadoCancelado> certificados = certificadoService.listarCertificadosCancelados();
+        return ResponseEntity.ok(certificados);
+    }
+
+    // GET - Listar certificados ativos por ID do curso
+    @GetMapping("/curso/{idCurso}")
+    public ResponseEntity<List<CertificadoAtivo>> getCertificadosPorCurso(@PathVariable Long idCurso) {
+         try {
+            List<CertificadoAtivo> certificados = certificadoService.listarCertificadosPorCurso(idCurso);
+            return ResponseEntity.ok(certificados);
+        } catch (RuntimeException e) {
+             // Consider returning an empty list with OK status or a specific status like NO_CONTENT
+             // Depending on API design preference. Here, returning OK with empty list.
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    // POST - Cancelar um certificado ativo
+    @PostMapping("/{id}/cancelar")
+    public ResponseEntity<Void> cancelarCertificado(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        String motivo = payload.get("motivo");
+        if (motivo == null || motivo.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build(); // Motivo is required
+        }
+        try {
+            certificadoService.cancelarCertificado(id, motivo);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            // Differentiate between "not found" and "already canceled" if needed
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // Or NotFound, depending on the exception message
+        }
+    }
+}
