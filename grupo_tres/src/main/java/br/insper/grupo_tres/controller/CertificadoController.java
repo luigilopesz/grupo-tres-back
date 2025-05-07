@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,12 @@ import br.insper.grupo_tres.models.CertificadoAtivo;
 import br.insper.grupo_tres.models.CertificadoCancelado;
 import br.insper.grupo_tres.service.CertificadoService;
 
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+
+
 @RestController
 @RequestMapping("/certificados")
 public class CertificadoController {
@@ -28,8 +35,12 @@ public class CertificadoController {
 
     // POST - Criar um novo certificado ativo
     @PostMapping
-    public ResponseEntity<?> createCertificado(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> createCertificado(@RequestBody Map<String, Object> payload, @AuthenticationPrincipal Jwt jwt) {
         try {
+            List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+            if (!roles.contains("ADMIN")) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
             String email = (String) payload.get("emailAluno");
             Long idCurso = Long.valueOf(payload.get("idCurso").toString());
             LocalDate dataEmissao = payload.containsKey("dataEmissao")
@@ -50,8 +61,12 @@ public class CertificadoController {
 
     // GET - Buscar certificado ativo por ID
     @GetMapping("/{id}")
-    public ResponseEntity<CertificadoAtivo> getCertificadoAtivo(@PathVariable Long id) {
+    public ResponseEntity<CertificadoAtivo> getCertificadoAtivo(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         try {
+            List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+            if (!roles.contains("ADMIN")) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
             CertificadoAtivo certificado = certificadoService.findCertificadoAtivo(id);
             return ResponseEntity.ok(certificado);
         } catch (RuntimeException e) {
@@ -61,8 +76,12 @@ public class CertificadoController {
 
     // GET - Buscar certificado cancelado por ID original
     @GetMapping("/cancelados/original/{idOriginal}")
-    public ResponseEntity<CertificadoCancelado> getCertificadoCancelado(@PathVariable Long idOriginal) {
+    public ResponseEntity<CertificadoCancelado> getCertificadoCancelado(@PathVariable Long idOriginal, @AuthenticationPrincipal Jwt jwt) {
         try {
+            List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+            if (!roles.contains("ADMIN")) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
             CertificadoCancelado certificado = certificadoService.findCertificadoCancelado(idOriginal);
             return ResponseEntity.ok(certificado);
         } catch (RuntimeException e) {
@@ -72,22 +91,34 @@ public class CertificadoController {
 
     // GET - Listar todos os certificados ativos
     @GetMapping("/ativos")
-    public ResponseEntity<List<CertificadoAtivo>> getAllCertificadosAtivos() {
+    public ResponseEntity<List<CertificadoAtivo>> getAllCertificadosAtivos(@AuthenticationPrincipal Jwt jwt) {
+        List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+        if (!roles.contains("ADMIN")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
         List<CertificadoAtivo> certificados = certificadoService.listarCertificadosAtivos();
         return ResponseEntity.ok(certificados);
     }
 
     // GET - Listar todos os certificados cancelados
     @GetMapping("/cancelados")
-    public ResponseEntity<List<CertificadoCancelado>> getAllCertificadosCancelados() {
+    public ResponseEntity<List<CertificadoCancelado>> getAllCertificadosCancelados(@AuthenticationPrincipal Jwt jwt) {
+        List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+        if (!roles.contains("ADMIN")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
         List<CertificadoCancelado> certificados = certificadoService.listarCertificadosCancelados();
         return ResponseEntity.ok(certificados);
     }
 
     // GET - Listar certificados ativos por ID do curso
     @GetMapping("/curso/{idCurso}")
-    public ResponseEntity<List<CertificadoAtivo>> getCertificadosPorCurso(@PathVariable Long idCurso) {
+    public ResponseEntity<List<CertificadoAtivo>> getCertificadosPorCurso(@PathVariable Long idCurso, @AuthenticationPrincipal Jwt jwt) {
         try {
+            List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+            if (!roles.contains("ADMIN")) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
             List<CertificadoAtivo> certificados = certificadoService.listarCertificadosPorCurso(idCurso);
             return ResponseEntity.ok(certificados);
         } catch (RuntimeException e) {
@@ -99,12 +130,16 @@ public class CertificadoController {
 
     // POST - Cancelar um certificado ativo
     @PostMapping("/{id}/cancelar")
-    public ResponseEntity<Void> cancelarCertificado(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<Void> cancelarCertificado(@PathVariable Long id, @RequestBody Map<String, String> payload, @AuthenticationPrincipal Jwt jwt) {
         String motivo = payload.get("motivo");
         if (motivo == null || motivo.trim().isEmpty()) {
             return ResponseEntity.badRequest().build(); // Motivo is required
         }
         try {
+            List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+            if (!roles.contains("ADMIN")) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
             certificadoService.cancelarCertificado(id, motivo);
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
@@ -114,7 +149,11 @@ public class CertificadoController {
     }
 
     @GetMapping("/curso/{idCurso}/info")
-    public ResponseEntity<CursoDTO> getInfoCurso(@PathVariable Long idCurso) {
+    public ResponseEntity<CursoDTO> getInfoCurso(@PathVariable Long idCurso, @AuthenticationPrincipal Jwt jwt) {
+        List<String> roles = jwt.getClaimAsStringList("https://musica-insper.com/roles");
+        if (!roles.contains("ADMIN")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
         CursoDTO curso = certificadoService.buscarCurso(idCurso);
         return ResponseEntity.ok(curso);
     }

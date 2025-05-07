@@ -76,10 +76,6 @@ public class CertificadoService {
     // CREATE
     private static final String MATRICULA_API = "https://54.94.157.137:8082/matriculas/{id}";
 
-    @Autowired
-    private RestTemplate restTemplate;
-
-
 
     public CertificadoAtivo criarCertificado(String emailAluno, Long idCurso, LocalDate dataEmissao) {
         // 1. Monta a URL, expandindo {id} e adicionando o queryParam
@@ -92,6 +88,7 @@ public class CertificadoService {
         // 2. Chama a API de matrícula
         ResponseEntity<MatriculaDTO[]> resp;
         try {
+            RestTemplate restTemplate = new RestTemplate();
             resp = restTemplate.getForEntity(uri, MatriculaDTO[].class);
         } catch (HttpClientErrorException.NotFound ex) {
             throw new IllegalArgumentException("Aluno não matriculado neste curso");
@@ -113,6 +110,7 @@ public class CertificadoService {
     private static final String CURSO_API = "http://54.232.22.180:8080/api/cursos/{id}";
     public CursoDTO buscarCurso(Long idCurso) {
         try {
+            RestTemplate restTemplate = new RestTemplate();
             ResponseEntity<CursoDTO> resp =
                     restTemplate.getForEntity(CURSO_API, CursoDTO.class, idCurso);
 

@@ -1,25 +1,19 @@
 package br.insper.grupo_tres.config;
-import org.springframework.security.web.SecurityFilterChain;
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-
 @Configuration
+@EnableWebSecurity
 public class WebSecurityConfig implements WebMvcConfigurer {
+
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -27,19 +21,12 @@ public class WebSecurityConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder.build();
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        // Permite o que estiver em /public/**
                         .requestMatchers("/public/").permitAll()
-                        // TODO: se quiser manter alguma rota aberta, adicione aqui antes do anyRequest()
-                        // todas as outras rotas exigem ROLE_ADMIN
-                        .anyRequest().hasRole("ADMIN")
+                        .anyRequest()
+                        .authenticated()
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -49,6 +36,4 @@ public class WebSecurityConfig implements WebMvcConfigurer {
 
         return http.build();
     }
-
-
 }
